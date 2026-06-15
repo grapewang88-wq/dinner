@@ -127,7 +127,13 @@ roll();
 function toggleAvoid(id,el){
 if(avoids.has(id)){avoids.delete(id);el.classList.remove('active');}
 else{avoids.add(id);el.classList.add('active');}
-roll();
+updateCount();
+}
+
+function updateCount(){
+const pool=getFiltered();
+const total=currentCat==='all'?DISHES.length:DISHES.filter(d=>d.cat===currentCat).length;
+document.getElementById('count').textContent='当前分类:'+(currentCat==='all'?'全部':currentCat)+' · 可选'+pool.length+'道'+(avoids.size?' (已排除'+(total-pool.length)+'道)':'');
 }
 
 function getFiltered(){
@@ -146,7 +152,7 @@ history.unshift(dish.name);if(history.length>15)history.pop();
 render(dish);renderHistory();
 const card=document.getElementById('card');
 card.style.transform='scale(1.02)';setTimeout(()=>card.style.transform='',150);
-document.getElementById('count').textContent='当前分类:'+(currentCat==='all'?'全部':currentCat)+' · '+pool.length+'道'+(avoids.size?' (已过滤'+(DISHES.filter(d=>d.cat===currentCat||currentCat==='all').length-pool.length)+'道)':'');
+updateCount();
 }
 
 function render(dish){
