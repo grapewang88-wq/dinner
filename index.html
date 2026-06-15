@@ -126,10 +126,116 @@ copyTextCompat(text);
 }
 
 function share(){
-// 分享页面链接到微信
-const url='https://grapewang88-wq.github.io/dinner/';
-const text='🍳 今晚吃什么？200道家常菜随机选，食材做法都有！\n'+url;
-copyTextCompat(text);
+if(!currentDish)return;
+const canvas=document.getElementById('shareCanvas');
+const ctx=canvas.getContext('2d');
+const W=750,H=Math.max(900,680+currentDish.steps.length*52);
+
+canvas.width=W;canvas.height=H;
+
+// Background
+const bg=ctx.createLinearGradient(0,0,0,H);
+bg.addColorStop(0,'#1a1a2e');bg.addColorStop(0.5,'#16213e');bg.addColorStop(1,'#0f3460');
+ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+
+// Orange accent top bar
+ctx.fillStyle='#FF8C00';ctx.fillRect(0,0,W,6);
+
+// Emoji + Title
+ctx.fillStyle='#FF8C00';ctx.font='bold 48px "PingFang SC","Microsoft YaHei",sans-serif';
+ctx.textAlign='center';
+ctx.fillText('🍳 '+currentDish.name, W/2, 90);
+
+// Tag
+ctx.font='24px "PingFang SC","Microsoft YaHei",sans-serif';
+ctx.fillStyle='rgba(255,140,0,0.8)';
+ctx.fillText(currentDish.tag+' · '+currentDish.cat, W/2, 135);
+
+// Divider
+ctx.strokeStyle='rgba(255,255,255,0.15)';ctx.lineWidth=1;
+ctx.beginPath();ctx.moveTo(60,160);ctx.lineTo(W-60,160);ctx.stroke();
+
+let y=205;
+
+// Main Ingredients
+ctx.textAlign='left';
+ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font='bold 22px "PingFang SC","Microsoft YaHei",sans-serif';
+ctx.fillText('🛒 主要食材', 60, y);y+=38;
+
+ctx.font='20px "PingFang SC","Microsoft YaHei",sans-serif';
+currentDish.main.forEach(i=>{
+  const tw=ctx.measureText(i).width+28;
+  if(60+tw>W-60){y+=34;}
+  ctx.fillStyle='rgba(255,152,0,0.2)';
+  ctx.fillRect(60,y-24,tw,32);
+  ctx.fillStyle='#FFB74D';
+  ctx.fillText(i,74,y);
+  y+=44;
+});
+y+=10;
+
+// Sub ingredients
+ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font='bold 22px "PingFang SC","Microsoft YaHei",sans-serif';
+ctx.fillText('🧂 调料辅料', 60, y);y+=38;
+ctx.font='20px "PingFang SC","Microsoft YaHei",sans-serif';
+currentDish.sub.forEach(i=>{
+  const tw=ctx.measureText(i).width+28;
+  ctx.fillStyle='rgba(76,175,80,0.15)';
+  ctx.fillRect(60,y-24,tw,32);
+  ctx.fillStyle='#81C784';
+  ctx.fillText(i,74,y);
+  y+=44;
+});
+y+=10;
+
+// Steps
+ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font='bold 22px "PingFang SC","Microsoft YaHei",sans-serif';
+ctx.fillText('👨‍🍳 做法', 60, y);y+=38;
+ctx.fillStyle='rgba(255,255,255,0.75)';ctx.font='19px "PingFang SC","Microsoft YaHei",sans-serif';
+currentDish.steps.forEach((s,i)=>{
+  const stepText=(i+1)+'. '+s;
+  const lines=wrapText(ctx,stepText,W-120);
+  lines.forEach(line=>{
+    ctx.fillText(line,60,y);
+    y+=36;
+  });
+  y+=4;
+});
+
+// Footer
+y+=20;
+ctx.strokeStyle='rgba(255,255,255,0.1)';
+ctx.beginPath();ctx.moveTo(60,y);ctx.lineTo(W-60,y);ctx.stroke();
+y+=35;
+ctx.fillStyle='rgba(255,255,255,0.25)';ctx.font='18px "PingFang SC","Microsoft YaHei",sans-serif';
+ctx.textAlign='center';
+ctx.fillText('🍳 今晚吃什么 · 200道家常菜', W/2, y);
+ctx.fillText('grapewang88-wq.github.io/dinner', W/2, y+30);
+
+// Show image
+const img=document.getElementById('shareImg');
+img.src=canvas.toDataURL('image/png');
+document.getElementById('shareModal').style.display='flex';
+img.onload=()=>{showToast('📸 长按图片 → 保存 → 去微信发送');};
+}
+
+function wrapText(ctx,text,maxWidth){
+const words=text.split('');const lines=[];let line='';
+for(let i=0;i<words.length;i++){
+  const test=line+words[i];
+  if(ctx.measureText(test).width>maxWidth&&line.length>0){lines.push(line);line=words[i];}
+  else{line=test;}
+}
+lines.push(line);return lines;
+}
+
+let currentDish=null;
+// Hook into render to save current dish
+const _origRender=render;
+render=function(dish){currentDish=dish;_origRender(dish);};
+
+function closeModal(){
+document.getElementById('shareModal').style.display='none';
 }
 
 function copyTextCompat(text){
@@ -156,6 +262,11 @@ setTimeout(()=>t.classList.remove('show'),2000);
 document.addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();roll();}});
 init();
 </script>
+<canvas id="shareCanvas" style="display:none"></canvas>
+<div id="shareModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:9999;flex-direction:column;align-items:center;justify-content:center;padding:16px;overflow-y:auto" onclick="closeModal()">
+<img id="shareImg" style="max-width:100%;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.5)" alt="菜品卡片">
+<p style="color:rgba(255,255,255,0.6);font-size:14px;margin-top:16px;text-align:center">👆 长按图片保存 → 去微信发送</p>
+</div>
 <script>
 if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}
 </script>
